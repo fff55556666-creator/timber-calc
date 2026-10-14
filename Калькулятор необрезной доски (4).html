@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ru" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Калькулятор необрезной доски</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        timber: {
+                            50: '#fdf8f0',
+                            100: '#fbeedc',
+                            200: '#f5d7b3',
+                            500: '#d99b43',
+                            600: '#b87c2b',
+                            700: '#946120',
+                            800: '#734a1b',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Google Fonts Inter -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; -webkit-tap-highlight-color: transparent; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        ::-webkit-scrollbar { width: 4px; height: 4px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+    </style>
+</head>
+<body class="bg-slate-100 dark:bg-slate-950 text-slate-800 dark:text-slate-100 h-full flex flex-col justify-between selection:bg-timber-500 selection:text-white">
+
+    <div id="toast" class="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 bg-slate-900 dark:bg-slate-800 text-white px-3.5 py-2 rounded-xl shadow-2xl text-xs font-medium opacity-0 transition-opacity duration-300 pointer-events-none flex items-center space-x-2 border border-slate-700">
+        <i data-lucide="check-circle-2" class="w-3.5 h-3.5 text-emerald-400"></i>
+        <span id="toast-msg">Добавлено</span>
+    </div>
+
+    <div class="max-w-md w-full mx-auto bg-white dark:bg-slate-900 h-full flex flex-col shadow-2xl relative overflow-hidden">
+        
+        <header class="bg-timber-600 dark:bg-timber-800 text-white px-3 py-2.5 shadow-md flex items-center justify-between shrink-0">
+            <div class="flex items-center space-x-2">
+                <div class="bg-white/10 p-1.5 rounded-xl backdrop-blur-sm flex items-center justify-center">
+                    <svg class="w-4 h-4 text-timber-100" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                    </svg>
+                </div>
+                <div>
+                    <h1 class="font-bold text-sm leading-tight">КубДоска 2.5</h1>
+                    <p class="text-[10px] text-timber-100 opacity-90">Учёт по брёвнам</p>
+                </div>
+            </div>
+            <div class="flex items-center space-x-1.5">
+                <button onclick="switchTab('calc')" id="top-tab-calc" class="px-2.5 py-1 rounded-lg bg-white/25 text-xs font-semibold transition">Набор</button>
+                <button onclick="switchTab('batch')" id="top-tab-batch" class="px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/20 text-xs font-semibold transition flex items-center space-x-1">
+                    <span>Таблица</span>
+                    <span id="top-badge-count" class="bg-amber-400 text-slate-900 px-1 py-0.2 rounded-full text-[9px] font-bold hidden">0</span>
+                </button>
+                <button onclick="toggleDarkMode()" class="p-1.5 rounded-lg bg-white/10 hover:bg-white/20 transition" aria-label="Тема">
+                    <i data-lucide="moon" id="theme-icon" class="w-3.5 h-3.5"></i>
+                </button>
+            </div>
+        </header>
+
+        <main class="flex-1 overflow-y-auto p-2.5 pb-20 space-y-2.5">
+            
+            <div id="tab-calc" class="tab-content active space-y-2.5">
+                
+                <div class="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shadow-sm">
+                    <!-- Log Selector & Compact Header -->
+                    <div class="flex items-center justify-between bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800/60 px-2.5 py-1.5 rounded-lg">
+                        <div class="flex items-center space-x-2">
+                            <span class="bg-amber-500 text-white font-black text-xs w-6 h-6 rounded-lg flex items-center justify-center shadow-sm" id="active-log-badge">1</span>
+                            <span class="text-xs font-bold text-amber-900 dark:text-amber-300" id="active-log-title">Бревно №1</span>
+                        </div>
+                        <button onclick="nextLog()" class="bg-amber-600 hover:bg-amber-700 text-white text-[11px] font-bold px-2.5 py-1 rounded-lg shadow transition flex items-center space-x-1 active:scale-95">
+                            <i data-lucide="plus-circle" class="w-3 h-3"></i>
+                            <span>След. бревно</span>
+                        </button>
+                    </div>
+
+                    <!-- Core Inputs (Length & Thickness) -->
+                    <div class="grid grid-cols-2 gap-2">
+                        <!-- Length -->
+                        <div class="bg-white dark:bg-slate-700/60 p-1.5 rounded-lg border border-slate-200 dark:border-slate-600">
+                            <div class="flex justify-between items-center mb-0.5 px-1">
+                                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Длина</span>
+                                <span class="text-[11px] font-bold text-timber-600 dark:text-timber-400" id="length-val">3.0 м</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <button type="button" onclick="adjustValue('length', -0.1)" class="w-7 h-6 bg-slate-100 dark:bg-slate-600 rounded flex items-center justify-center font-bold text-xs active:scale-95">-</button>
+                                <input type="number" id="input-length" step="0.1" min="0.5" max="10" value="3.0" oninput="syncInput('length')"
+                                    class="w-full bg-slate-50 dark:bg-slate-800 rounded border-0 text-center font-bold text-xs py-0.5 focus:ring-1 focus:ring-timber-500">
+                                <button type="button" onclick="adjustValue('length', 0.1)" class="w-7 h-6 bg-slate-100 dark:bg-slate-600 rounded flex items-center justify-center font-bold text-xs active:scale-95">+</button>
+                            </div>
+                        </div>
+
+                        <!-- Thickness -->
+                        <div class="bg-white dark:bg-slate-700/60 p-1.5 rounded-lg border border-slate-200 dark:border-slate-600">
+                            <div class="flex justify-between items-center mb-0.5 px-1">
+                                <span class="text-[10px] font-semibold text-slate-500 dark:text-slate-400 uppercase">Толщина</span>
+                                <span class="text-[11px] font-bold text-timber-600 dark:text-timber-400" id="thickness-val">25 мм</span>
+                            </div>
+                            <div class="flex items-center space-x-1">
+                                <button type="button" onclick="adjustValue('thickness', -5)" class="w-7 h-6 bg-slate-100 dark:bg-slate-600 rounded flex items-center justify-center font-bold text-xs active:scale-95">-</button>
+                                <input type="number" id="input-thickness" step="1" min="10" max="200" value="25" oninput="syncInput('thickness')"
+                                    class="w-full bg-slate-50 dark:bg-slate-800 rounded border-0 text-center font-bold text-xs py-0.5 focus:ring-1 focus:ring-timber-500">
+                                <button type="button" onclick="adjustValue('thickness', 5)" class="w-7 h-6 bg-slate-100 dark:bg-slate-600 rounded flex items-center justify-center font-bold text-xs active:scale-95">+</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Quick Thickness Presets -->
+                    <div class="flex items-center space-x-1 overflow-x-auto pt-0.5">
+                        <span class="text-[9px] font-semibold text-slate-400 uppercase shrink-0">Толщина:</span>
+                        <button type="button" onclick="setThickness(25)" class="px-2 py-0.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded text-[11px] font-bold active:scale-95">25</button>
+                        <button type="button" onclick="setThickness(32)" class="px-2 py-0.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded text-[11px] font-bold active:scale-95 text-timber-600 dark:text-timber-400">32</button>
+                        <button type="button" onclick="setThickness(40)" class="px-2 py-0.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded text-[11px] font-bold active:scale-95">40</button>
+                        <button type="button" onclick="setThickness(50)" class="px-2 py-0.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded text-[11px] font-bold active:scale-95">50</button>
+                        <button type="button" onclick="setThickness(52)" class="px-2 py-0.5 bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 rounded text-[11px] font-bold active:scale-95 text-timber-600 dark:text-timber-400">52</button>
+                    </div>
+                </div>
+
+                <div class="bg-slate-50 dark:bg-slate-800/80 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shadow-sm">
+                    <div class="flex justify-between items-center">
+                        <span class="text-xs font-bold uppercase tracking-wider text-timber-600 dark:text-timber-400 flex items-center space-x-1">
+                            <svg class="w-3.5 h-3.5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12H3M21 6H3M21 18H3"/></svg>
+                            <span>Ширина доски (см):</span>
+                        </span>
+                        <span class="text-[10px] text-slate-400">Тап добавляет в текущее бревно</span>
+                    </div>
+
+                    <div class="grid grid-cols-5 gap-1.5 max-h-44 overflow-y-auto pr-1" id="quick-widths-grid">
+                        <!-- Filled dynamically -->
+                    </div>
+                </div>
+
+                <div class="bg-gradient-to-r from-timber-600 to-amber-600 text-white p-3 rounded-xl shadow-md flex items-center justify-between">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-timber-100 font-semibold block">Общий объём кубатуры</span>
+                        <div class="text-xl font-black tracking-tight" id="live-total-vol-banner">0.000 м³</div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] uppercase tracking-wider text-timber-100 font-semibold block">Всего штук / брёвен</span>
+                        <div class="text-sm font-bold"><span id="live-total-qty-banner">0</span> шт (<span id="live-total-logs-banner">1</span> бр.)</div>
+                    </div>
+                </div>
+
+                <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 space-y-2 shadow-sm">
+                    <div class="flex justify-between items-center border-b border-slate-100 dark:border-slate-700 pb-1.5">
+                        <div class="flex items-center space-x-2">
+                            <span class="font-bold text-xs uppercase tracking-wider text-slate-700 dark:text-slate-200">Последние записи</span>
+                            <span id="live-table-count" class="bg-timber-100 dark:bg-timber-900/60 text-timber-700 dark:text-timber-300 px-2 py-0.5 rounded-full text-[10px] font-bold">0 шт</span>
+                        </div>
+                        <span class="text-xs font-extrabold text-timber-600 dark:text-timber-400" id="live-table-vol">0.000 м³</span>
+                    </div>
+
+                    <div id="live-table-list" class="max-h-28 overflow-y-auto space-y-1.5 pr-1">
+                        <div class="text-center py-3 text-slate-400 text-xs">
+                            Нажимайте на ширину — доски сохранятся с порядковым номером, временем и бревном.
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-3 gap-1.5 pt-1.5 border-t border-slate-100 dark:border-slate-700">
+                        <button onclick="printBatchReport()" class="bg-timber-600 hover:bg-timber-700 text-white py-1.5 rounded-lg font-medium text-xs transition flex items-center justify-center space-x-1 shadow-sm">
+                            <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                            <span>Печать</span>
+                        </button>
+                        <button onclick="saveBatchToHistory()" class="bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 text-slate-700 dark:text-slate-200 py-1.5 rounded-lg font-medium text-xs transition flex items-center justify-center space-x-1">
+                            <i data-lucide="save" class="w-3.5 h-3.5"></i>
+                            <span>Сохранить</span>
+                        </button>
+                        <button onclick="clearBatch()" class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 hover:bg-red-100 py-1.5 rounded-lg font-medium text-xs transition flex items-center justify-center space-x-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                            <span>Сброс</span>
+                        </button>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="tab-batch" class="tab-content space-y-2.5">
+                <div class="bg-gradient-to-r from-timber-600 to-amber-600 text-white p-3.5 rounded-xl shadow-md flex justify-between items-center">
+                    <div>
+                        <span class="text-[10px] uppercase tracking-wider text-timber-100 font-semibold block">Общая кубатура партии</span>
+                        <div class="text-2xl font-black tracking-tight" id="full-total-vol">0.000 м³</div>
+                    </div>
+                    <div class="text-right">
+                        <span class="text-[10px] uppercase tracking-wider text-timber-100 font-semibold block">Всего распилено</span>
+                        <div class="text-xs font-bold"><span id="full-total-qty">0</span> досок / <span id="full-total-logs">0</span> брёвен</div>
+                    </div>
+                </div>
+
+                <div class="flex space-x-2">
+                    <button onclick="printBatchReport()" class="flex-1 bg-timber-600 text-white py-2 rounded-xl font-semibold text-xs flex items-center justify-center space-x-1 shadow-sm">
+                        <i data-lucide="printer" class="w-3.5 h-3.5"></i>
+                        <span>Распечатать перечётку</span>
+                    </button>
+                    <button onclick="clearBatch()" class="bg-red-50 dark:bg-red-900/20 text-red-600 dark:text-red-400 px-3 py-2 rounded-xl font-semibold text-xs flex items-center justify-center space-x-1">
+                        <i data-lucide="trash-2" class="w-3.5 h-3.5"></i>
+                        <span>Очистить</span>
+                    </button>
+                </div>
+
+                <div id="full-batch-list" class="space-y-2.5">
+                    <!-- Populated dynamically -->
+                </div>
+            </div>
+
+            <div id="tab-history" class="tab-content space-y-2.5">
+                <div class="flex justify-between items-center">
+                    <h3 class="font-bold text-xs uppercase text-slate-500">Сохранённые партии</h3>
+                    <button onclick="clearHistory()" class="text-xs text-red-500 hover:underline">Очистить всё</button>
+                </div>
+                <div id="history-list" class="space-y-2">
+                    <div class="text-center py-10 text-slate-400 text-xs">История пуста</div>
+                </div>
+            </div>
+
+        </main>
+
+        <nav class="bg-white dark:bg-slate-900 border-t border-slate-200 dark:border-slate-800 py-2 px-6 flex justify-around items-center shrink-0 absolute bottom-0 left-0 right-0 z-40 shadow-lg">
+            <button onclick="switchTab('calc')" id="nav-calc" class="flex flex-col items-center space-y-0.5 text-timber-600 dark:text-timber-400 transition">
+                <i data-lucide="sliders" class="w-4 h-4"></i>
+                <span class="text-[10px] font-semibold">Набор</span>
+            </button>
+            <button onclick="switchTab('batch')" id="nav-batch" class="flex flex-col items-center space-y-0.5 text-slate-400 hover:text-slate-600 transition relative">
+                <i data-lucide="table" class="w-4 h-4"></i>
+                <span class="text-[10px] font-semibold">Таблица</span>
+                <span id="nav-batch-badge" class="absolute -top-1 -right-2 bg-timber-500 text-white font-bold text-[9px] w-3.5 h-3.5 rounded-full flex items-center justify-center hidden">0</span>
+            </button>
+            <button onclick="switchTab('history')" id="nav-history" class="flex flex-col items-center space-y-0.5 text-slate-400 hover:text-slate-600 transition">
+                <i data-lucide="clock" class="w-4 h-4"></i>
+                <span class="text-[10px] font-semibold">История</span>
+            </button>
+        </nav>
+
+    </div>
+
+    <div id="print-section" class="hidden print:block bg-white text-black p-6 font-sans">
+        <div class="text-center mb-6 border-b pb-4">
+            <h1 class="text-xl font-bold">СПЕЦИФИКАЦИЯ РАСПИЛОВКИ НЕОБРЕЗНОЙ ДОСКИ</h1>
+            <p class="text-sm text-gray-600" id="print-date">Дата: 01.01.2026</p>
+        </div>
+        <div id="print-content-area"></div>
+        <div class="mt-8 flex justify-between text-sm text-gray-500 pt-8 border-t">
+            <div>Распилил: ___________________</div>
+            <div>Принял: ___________________</div>
+        </div>
+    </div>
+
+    <script>
+        let appState = {
+            length: 3.0,
+            thickness: 25,
+            currentLog: 1,
+            batch: [],
+            history: []
+        };
+
+        const quickWidths = [];
+        for (let w = 10; w <= 50; w++) {
+            quickWidths.push(w);
+        }
+
+        function loadStorage() {
+            try {
+                const b = localStorage.getItem('timber_batch_v7');
+                if (b) appState.batch = JSON.parse(b);
+                const l = localStorage.getItem('timber_current_log_v7');
+                if (l) appState.currentLog = parseInt(l) || 1;
+                const h = localStorage.getItem('timber_history_v7');
+                if (h) appState.history = JSON.parse(h);
+                const theme = localStorage.getItem('timber_theme');
+                if (theme === 'dark' || (!theme && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+                    document.documentElement.classList.add('dark');
+                    updateThemeIcon(true);
+                }
+            } catch (e) {}
+        }
+
+        function saveStorage() {
+            try {
+                localStorage.setItem('timber_batch_v7', JSON.stringify(appState.batch));
+                localStorage.setItem('timber_current_log_v7', appState.currentLog);
+                localStorage.setItem('timber_history_v7', JSON.stringify(appState.history));
+            } catch (e) {}
+        }
+
+        window.addEventListener('DOMContentLoaded', () => {
+            loadStorage();
+            renderQuickWidths();
+            lucide.createIcons();
+            updateAllViews();
+        });
+
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('timber_theme', isDark ? 'dark' : 'light');
+            updateThemeIcon(isDark);
+        }
+
+        function updateThemeIcon(isDark) {
+            const icon = document.getElementById('theme-icon');
+            if (icon) {
+                icon.setAttribute('data-lucide', isDark ? 'sun' : 'moon');
+                lucide.createIcons();
+            }
+        }
+
+        function switchTab(tabId) {
+            ['calc', 'batch', 'history'].forEach(id => {
+                document.getElementById(`tab-${id}`).classList.remove('active');
+                const navBtn = document.getElementById(`nav-${id}`);
+                if (id === tabId) {
+                    navBtn.className = "flex flex-col items-center space-y-0.5 text-timber-600 dark:text-timber-400 transition";
+                } else {
+                    navBtn.className = "flex flex-col items-center space-y-0.5 text-slate-400 hover:text-slate-600 transition";
+                }
+            });
+            document.getElementById(`tab-${tabId}`).classList.add('active');
+
+            if (tabId === 'calc') {
+                document.getElementById('top-tab-calc').className = "px-2.5 py-1 rounded-lg bg-white/25 text-xs font-semibold transition";
+                document.getElementById('top-tab-batch').className = "px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/20 text-xs font-semibold transition flex items-center space-x-1";
+            } else if (tabId === 'batch') {
+                document.getElementById('top-tab-batch').className = "px-2.5 py-1 rounded-lg bg-white/25 text-xs font-semibold transition flex items-center space-x-1";
+                document.getElementById('top-tab-calc').className = "px-2.5 py-1 rounded-lg bg-white/15 hover:bg-white/20 text-xs font-semibold transition";
+            }
+
+            updateAllViews();
+        }
+
+        function renderQuickWidths() {
+            const grid = document.getElementById('quick-widths-grid');
+            let html = '';
+            quickWidths.forEach(w => {
+                html += `<button type="button" onclick="selectWidth(${w})" class="bg-white dark:bg-slate-700 border border-slate-200 dark:border-slate-600 hover:border-timber-500 hover:bg-timber-50 dark:hover:bg-timber-900/40 text-slate-800 dark:text-slate-100 font-bold py-1.5 rounded-lg text-xs transition active:scale-95 shadow-sm">
+                    ${w} см
+                </button>`;
+            });
+            grid.innerHTML = html;
+        }
+
+        function nextLog() {
+            appState.currentLog++;
+            saveStorage();
+            updateAllViews();
+            showToast(`Начато бревно №${appState.currentLog}`);
+        }
+
+        function selectWidth(widthCm) {
+            const len = appState.length;
+            const thick = appState.thickness;
+            const volume = len * (thick / 1000.0) * (widthCm / 100.0) * 1;
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit', second: '2-digit' });
+            const dateStr = now.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' });
+
+            appState.batch.unshift({
+                id: Date.now() + Math.random(),
+                logNum: appState.currentLog,
+                length: len,
+                thickness: thick,
+                width: widthCm,
+                qty: 1,
+                volume: volume,
+                time: `${dateStr} ${timeStr}`
+            });
+
+            saveStorage();
+            updateAllViews();
+            showToast(`Бр.${appState.currentLog} | Доска ${widthCm} см (${volume.toFixed(3)} м³)`);
+        }
+
+        function adjustValue(field, delta) {
+            if (field === 'length') {
+                appState.length = Math.max(0.5, Math.min(12, parseFloat((appState.length + delta).toFixed(1))));
+                document.getElementById('input-length').value = appState.length;
+                document.getElementById('length-val').innerText = `${appState.length.toFixed(1)} м`;
+            } else if (field === 'thickness') {
+                appState.thickness = Math.max(10, Math.min(200, Math.round(appState.thickness + delta)));
+                document.getElementById('input-thickness').value = appState.thickness;
+                document.getElementById('thickness-val').innerText = `${appState.thickness} мм`;
+            }
+        }
+
+        function syncInput(field) {
+            if (field === 'length') {
+                appState.length = parseFloat(document.getElementById('input-length').value) || 3.0;
+                document.getElementById('length-val').innerText = `${appState.length.toFixed(1)} м`;
+            } else if (field === 'thickness') {
+                appState.thickness = parseFloat(document.getElementById('input-thickness').value) || 25;
+                document.getElementById('thickness-val').innerText = `${appState.thickness} мм`;
+            }
+        }
+
+        function setThickness(val) {
+            appState.thickness = val;
+            document.getElementById('input-thickness').value = val;
+            document.getElementById('thickness-val').innerText = `${val} мм`;
+        }
+
+        function removeItem(id) {
+            if (confirm('Хотите удалить эту запись?')) {
+                appState.batch = appState.batch.filter(item => item.id !== id);
+                saveStorage();
+                updateAllViews();
+                showToast("Запись удалена");
+            }
+        }
+
+        function clearBatch() {
+            if (appState.batch.length === 0) return;
+            if (confirm('Очистить все таблицы и сбросить брёвна?')) {
+                appState.batch = [];
+                appState.currentLog = 1;
+                saveStorage();
+                updateAllViews();
+            }
+        }
+
+        function updateAllViews() {
+            let totalVol = 0, totalQty = 0;
+            const uniqueLogs = new Set();
+            appState.batch.forEach(item => {
+                totalVol += item.volume;
+                totalQty += item.qty;
+                uniqueLogs.add(item.logNum);
+            });
+
+            document.getElementById('active-log-badge').innerText = appState.currentLog;
+            document.getElementById('active-log-title').innerText = `Бревно №${appState.currentLog}`;
+
+            const topBadge = document.getElementById('top-badge-count');
+            const navBadge = document.getElementById('nav-batch-badge');
+            if (appState.batch.length > 0) {
+                topBadge.innerText = appState.batch.length;
+                topBadge.classList.remove('hidden');
+                navBadge.innerText = appState.batch.length;
+                navBadge.classList.remove('hidden');
+            } else {
+                topBadge.classList.add('hidden');
+                navBadge.classList.add('hidden');
+            }
+
+            document.getElementById('live-total-vol-banner').innerText = `${totalVol.toFixed(3)} м³`;
+            document.getElementById('live-total-qty-banner').innerText = totalQty;
+            document.getElementById('live-total-logs-banner').innerText = uniqueLogs.size > 0 ? uniqueLogs.size : 1;
+            
+            document.getElementById('live-table-count').innerText = `${totalQty} шт`;
+            document.getElementById('live-table-vol').innerText = `${totalVol.toFixed(3)} м³`;
+            
+            document.getElementById('full-total-vol').innerText = `${totalVol.toFixed(3)} м³`;
+            document.getElementById('full-total-qty').innerText = totalQty;
+            document.getElementById('full-total-logs').innerText = uniqueLogs.size > 0 ? uniqueLogs.size : 1;
+
+            // Group logs and calculate sequential numbers per log
+            const logsMap = {};
+            // To assign correct sequential numbers (1, 2, 3...) per log from oldest to newest added
+            const chronologicalBatch = [...appState.batch].reverse();
+            const logCounters = {};
+
+            chronologicalBatch.forEach(item => {
+                if (!logCounters[item.logNum]) logCounters[item.logNum] = 1;
+                item.seqIndex = logCounters[item.logNum]++;
+                if (!logsMap[item.logNum]) logsMap[item.logNum] = [];
+                logsMap[item.logNum].push(item);
+            });
+
+            // Render live preview table (most recent first)
+            let liveHtml = '';
+            if (appState.batch.length === 0) {
+                liveHtml = `<div class="text-center py-3 text-slate-400 text-xs">Нажимайте на ширину выше — доски сразу идут в текущее бревно.</div>`;
+            } else {
+                appState.batch.slice(0, 15).forEach((item) => {
+                    liveHtml += `
+                        <div class="bg-slate-50 dark:bg-slate-700/50 p-1.5 rounded-lg border border-slate-200 dark:border-slate-700 flex items-center justify-between text-xs">
+                            <div class="flex items-center space-x-1.5">
+                                <span class="bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1.5 py-0.5 rounded font-bold text-[9px]">№${item.seqIndex} (Бр.${item.logNum})</span>
+                                <span class="font-bold text-slate-800 dark:text-slate-100">${item.width} см</span>
+                                <span class="text-slate-400 text-[10px]">${item.time}</span>
+                            </div>
+                            <div class="flex items-center space-x-1.5">
+                                <span class="font-extrabold text-slate-900 dark:text-white">${item.volume.toFixed(3)} м³</span>
+                                <button onclick="removeItem('${item.id}')" class="text-red-500 hover:text-red-700 p-0.5" title="Удалить"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+            document.getElementById('live-table-list').innerHTML = liveHtml;
+
+            // Render full table view grouped by log
+            let fullHtml = '';
+            if (appState.batch.length === 0) {
+                fullHtml = `<div class="text-center py-12 text-slate-400 text-xs bg-slate-50 dark:bg-slate-800 rounded-xl border border-dashed border-slate-200 dark:border-slate-700">Таблица пуста</div>`;
+            } else {
+                Object.keys(logsMap).sort((a,b) => b - a).forEach(logNum => {
+                    const logItems = logsMap[logNum];
+                    let logVol = 0;
+                    logItems.forEach(i => logVol += i.volume);
+
+                    fullHtml += `
+                        <div class="bg-slate-50 dark:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700 p-2.5 space-y-2">
+                            <div class="flex justify-between items-center border-b border-slate-200 dark:border-slate-700 pb-1.5">
+                                <span class="font-bold text-xs text-timber-600 dark:text-timber-400 flex items-center space-x-1">
+                                    <svg class="w-3.5 h-3.5 text-amber-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="4"/></svg>
+                                    <span>Бревно №${logNum}</span>
+                                </span>
+                                <span class="text-xs font-black">${logVol.toFixed(3)} м³ (${logItems.length} досок)</span>
+                            </div>
+                            <div class="space-y-1">
+                    `;
+                    logItems.slice().reverse().forEach(item => {
+                        fullHtml += `
+                            <div class="bg-white dark:bg-slate-700/50 p-1.5 rounded-lg border border-slate-200 dark:border-slate-600 flex items-center justify-between text-xs">
+                                <div class="flex items-center space-x-1.5">
+                                    <span class="bg-amber-500/20 text-amber-700 dark:text-amber-300 px-1 py-0.5 rounded font-bold text-[9px]">№${item.seqIndex}</span>
+                                    <span class="font-bold text-slate-800 dark:text-slate-100">${item.width} см</span>
+                                    <span class="text-slate-400 text-[10px]">(${item.length}м / ${item.thickness}мм)</span>
+                                    <span class="text-[9px] text-slate-400 bg-slate-100 dark:bg-slate-800 px-1 py-0.5 rounded">${item.time}</span>
+                                </div>
+                                <div class="flex items-center space-x-1.5">
+                                    <span class="font-extrabold">${item.volume.toFixed(3)} м³</span>
+                                    <button onclick="removeItem('${item.id}')" class="text-red-500 hover:text-red-700 p-0.5" title="Удалить"><i data-lucide="trash-2" class="w-3 h-3"></i></button>
+                                </div>
+                            </div>
+                        `;
+                    });
+                    fullHtml += `</div></div>`;
+                });
+            }
+            document.getElementById('full-batch-list').innerHTML = fullHtml;
+            lucide.createIcons();
+        }
+
+        function saveBatchToHistory() {
+            if (appState.batch.length === 0) {
+                showToast("Таблица пуста");
+                return;
+            }
+            let totalVol = 0, totalQty = 0;
+            const uniqueLogs = new Set();
+            appState.batch.forEach(item => {
+                totalVol += item.volume;
+                totalQty += item.qty;
+                uniqueLogs.add(item.logNum);
+            });
+
+            appState.history.unshift({
+                id: Date.now(),
+                date: new Date().toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit', year: 'numeric', hour: '2-digit', minute: '2-digit' }),
+                logsCount: uniqueLogs.size,
+                totalQty: totalQty,
+                totalVolume: totalVol,
+                items: [...appState.batch]
+            });
+            saveStorage();
+            renderHistoryList();
+            showToast("Партия сохранена в историю!");
+            switchTab('history');
+        }
+
+        function renderHistoryList() {
+            const list = document.getElementById('history-list');
+            if (appState.history.length === 0) {
+                list.innerHTML = `<div class="text-center py-10 text-slate-400 text-xs">История пуста</div>`;
+                return;
+            }
+            let html = '';
+            appState.history.forEach(h => {
+                html += `
+                    <div class="bg-white dark:bg-slate-800 p-2.5 rounded-xl border border-slate-200 dark:border-slate-700 flex justify-between items-center text-xs">
+                        <div>
+                            <span class="font-bold text-slate-700 dark:text-slate-200">${h.date}</span>
+                            <div class="text-slate-400 text-[10px]">Брёвен: ${h.logsCount} | Досок: ${h.totalQty}</div>
+                        </div>
+                        <div class="text-right">
+                            <span class="font-extrabold text-timber-600 dark:text-timber-400 text-sm">${h.totalVolume.toFixed(3)} м³</span>
+                            <br><button onclick="loadHistory(${h.id})" class="text-[10px] text-timber-600 underline">Загрузить</button>
+                        </div>
+                    </div>
+                `;
+            });
+            list.innerHTML = html;
+        }
+
+        function loadHistory(id) {
+            const found = appState.history.find(h => h.id === id);
+            if (found) {
+                appState.batch = [...found.items];
+                saveStorage();
+                updateAllViews();
+                switchTab('calc');
+                showToast("Партия загружена");
+            }
+        }
+
+        function clearHistory() {
+            if (appState.history.length === 0) return;
+            if (confirm('Очистить историю?')) {
+                appState.history = [];
+                saveStorage();
+                renderHistoryList();
+            }
+        }
+
+        function printBatchReport() {
+            if (appState.batch.length === 0) {
+                showToast("Таблица пуста");
+                return;
+            }
+            const area = document.getElementById('print-content-area');
+            let html = '';
+            let totalVol = 0, totalQty = 0;
+
+            const logsMap = {};
+            const chronologicalBatch = [...appState.batch].reverse();
+            const logCounters = {};
+
+            chronologicalBatch.forEach(item => {
+                if (!logCounters[item.logNum]) logCounters[item.logNum] = 1;
+                item.seqIndex = logCounters[item.logNum]++;
+                if (!logsMap[item.logNum]) logsMap[item.logNum] = [];
+                logsMap[item.logNum].push(item);
+                totalVol += item.volume;
+                totalQty += item.qty;
+            });
+
+            Object.keys(logsMap).sort((a,b) => a - b).forEach(logNum => {
+                const logItems = logsMap[logNum];
+                let logVol = 0;
+                logItems.forEach(i => logVol += i.volume);
+
+                html += `
+                    <div class="mb-4">
+                        <h3 class="font-bold text-sm bg-gray-200 p-1 border border-black">Бревно №${logNum} (Объём: ${logVol.toFixed(3)} м³, Досок: ${logItems.length})</h3>
+                        <table class="w-full border-collapse border border-black text-xs">
+                            <thead>
+                                <tr class="bg-gray-100">
+                                    <th class="border border-black p-1 w-12 text-center">№</th>
+                                    <th class="border border-black p-1 text-center">Размер (Д × Т × Ш)</th>
+                                    <th class="border border-black p-1 w-24 text-center">Время</th>
+                                    <th class="border border-black p-1 w-16 text-right">м³</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                `;
+                logItems.forEach((item) => {
+                    html += `
+                        <tr>
+                            <td class="border border-black p-1 text-center font-bold">${item.seqIndex}</td>
+                            <td class="border border-black p-1 text-center">${item.length}м × ${item.thickness}мм × ${item.width}см</td>
+                            <td class="border border-black p-1 text-center">${item.time}</td>
+                            <td class="border border-black p-1 text-right font-mono">${item.volume.toFixed(3)}</td>
+                        </tr>
+                    `;
+                });
+                html += `</tbody></table></div>`;
+            });
+
+            html += `
+                <div class="flex justify-end text-base font-bold border-t-2 border-black pt-2 mt-4">
+                    Итого общая кубатура: <span class="ml-2">${totalVol.toFixed(3)}</span> м³ (${totalQty} шт)
+                </div>
+            `;
+
+            area.innerHTML = html;
+            document.getElementById('print-date').innerText = "Дата отчёта: " + new Date().toLocaleString('ru-RU');
+            window.print();
+        }
+
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toast-msg').innerText = msg;
+            toast.classList.remove('opacity-0');
+            toast.classList.add('opacity-100');
+            setTimeout(() => {
+                toast.classList.remove('opacity-100');
+                toast.classList.add('opacity-0');
+            }, 2000);
+        }
+    </script>
+</body>
+</html>
